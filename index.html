@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Penalty Tables</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Penalty">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b5d2a">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230b5d2a'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --grass1: #11883b; --grass2: #0e7a34; --night: #0a1a2f; --panel: rgba(8, 24, 20, .72);
+    --text: #fff; --dim: #b9d8c4; --gold: #ffd23f; --green: #3ddc84; --red: #ff4d4d; --cyan: #5ce1ff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; color: var(--text); overscroll-behavior: none;
+    font-family: "Avenir Next", "Trebuchet MS", -apple-system, system-ui, sans-serif; }
+  body { background: var(--night); user-select: none; -webkit-user-select: none; overflow: hidden; }
+  .screen { display: none; position: fixed; inset: 0; flex-direction: column; max-width: 520px; margin: 0 auto;
+    padding: calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 10px); overflow: hidden auto; }
+  .screen.on { display: flex; }
+  .bg { position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(ellipse at 50% 0, rgba(255,255,255,.22), transparent 55%),
+      repeating-linear-gradient(0deg, var(--grass1) 0 46px, var(--grass2) 46px 92px); }
+  #flash { position: fixed; inset: 0; pointer-events: none; opacity: 0; z-index: 50; }
+  canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
+
+  /* ---------- setup ---------- */
+  h1 { text-align: center; margin: 6px 0 2px; font-size: 2rem; letter-spacing: 1px; text-shadow: 0 3px 0 rgba(0,0,0,.35); }
+  h1 b { color: var(--gold); }
+  .sub { text-align: center; color: var(--dim); margin: 0 0 8px; }
+  .ballhero { text-align: center; font-size: 64px; animation: bounce 1s infinite; }
+  @keyframes bounce { 0%,100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-18px) rotate(180deg); } }
+  .card { background: var(--panel); border-radius: 18px; padding: 8px 14px 14px; backdrop-filter: blur(6px); }
+  label { display: block; margin: 10px 0 4px; color: var(--dim); font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  input[type=text], input[type=number] { width: 100%; font-size: 18px; font-weight: 700; padding: 11px; border-radius: 12px;
+    border: 2px solid rgba(255,255,255,.25); background: rgba(0,0,0,.35); color: #fff; user-select: text; -webkit-user-select: text; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); background: rgba(0,0,0,.3);
+    color: #fff; font-size: 1.05rem; font-weight: 800; touch-action: manipulation; }
+  .chip.on { background: var(--gold); color: #3a2b00; border-color: #fff; transform: scale(1.08); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .big { margin-top: 16px; width: 100%; padding: 16px; font-size: 1.35rem; font-weight: 900; border: 0; border-radius: 18px;
+    background: linear-gradient(#ffe066, #ffb703); color: #3a2300; box-shadow: 0 6px 0 #b27900; touch-action: manipulation; }
+  .big:active { transform: translateY(5px); box-shadow: 0 1px 0 #b27900; }
+  #err { color: #ffb3b3; min-height: 1.2em; margin: 8px 0 0; font-weight: 700; }
+
+  /* ---------- game ---------- */
+  .hud { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-weight: 800;
+    background: var(--panel); border-radius: 14px; padding: 6px 12px; font-size: .95rem; }
+  .hud .mid { letter-spacing: 3px; }
+  .hud button { background: none; border: 0; font-size: 1.3rem; padding: 0 4px; }
+  .pitch { position: relative; flex: 1; min-height: 0; margin: 8px 0; border-radius: 18px; overflow: hidden;
+    background:
+      radial-gradient(ellipse at 50% 100%, rgba(255,255,255,.15), transparent 60%),
+      repeating-linear-gradient(0deg, var(--grass1) 0 34px, var(--grass2) 34px 68px);
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,.35); }
+  .crowd { position: absolute; top: 0; left: 0; right: 0; height: 34px; background: #162a47; font-size: 20px; white-space: nowrap;
+    overflow: hidden; line-height: 34px; text-align: center; letter-spacing: 2px; }
+  .crowd span { display: inline-block; }
+  .crowd.cheer span { animation: hop .35s infinite alternate; }
+  .crowd.cheer span:nth-child(odd) { animation-delay: .17s; }
+  @keyframes hop { to { transform: translateY(-9px); } }
+  .goal { position: absolute; top: 40px; left: 50%; width: 76%; height: 32%; transform: translateX(-50%);
+    border: 6px solid #fff; border-bottom: 0; border-radius: 6px 6px 0 0;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.28) 0 2px, transparent 2px 14px),
+      repeating-linear-gradient(-45deg, rgba(255,255,255,.28) 0 2px, transparent 2px 14px), rgba(0,0,0,.35); }
+  .goal.shake { animation: netshake .5s; }
+  @keyframes netshake { 20% { transform: translateX(-50%) scale(1.04, 1.06); } 40% { transform: translateX(-50%) scale(.98, .97); } 60% { transform: translateX(-50%) scale(1.02); } }
+  .keeper { position: absolute; bottom: 0; left: 50%; font-size: 46px; line-height: 1; margin-left: -23px;
+    animation: patrol 1.6s ease-in-out infinite alternate; transform-origin: 50% 80%; }
+  @keyframes patrol { from { transform: translateX(-34px); } to { transform: translateX(34px); } }
+  .keeper.dive { animation: none; transition: transform .35s cubic-bezier(.2,.9,.3,1); }
+  .keeper.cheer { animation: none; transform: rotate(180deg) translateY(10px); transition: transform .4s; }
+  .spot { position: absolute; left: 50%; bottom: 14%; width: 70px; height: 20px; margin-left: -35px; border-radius: 50%;
+    background: radial-gradient(rgba(0,0,0,.35), transparent 70%); }
+  .ball { position: absolute; left: 50%; bottom: 14%; font-size: 44px; line-height: 1; margin-left: -22px; z-index: 5; }
+  .ball.idle { animation: ballidle 1.2s ease-in-out infinite; }
+  @keyframes ballidle { 50% { transform: translateY(-6px) rotate(25deg); } }
+  .banner { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font-size: 2.6rem; font-weight: 900; z-index: 10;
+    text-shadow: 0 4px 0 rgba(0,0,0,.4), 0 0 20px rgba(0,0,0,.4); opacity: 0; pointer-events: none; }
+  .banner.pop { animation: pop 1.3s ease-out; }
+  @keyframes pop { 0% { opacity: 0; transform: scale(.2) rotate(-12deg); } 18% { opacity: 1; transform: scale(1.25) rotate(4deg); }
+    30% { transform: scale(1) rotate(-2deg); } 80% { opacity: 1; } 100% { opacity: 0; transform: scale(1.1); } }
+  .fire { position: absolute; left: 10px; bottom: 8px; font-weight: 900; color: #ffb703; font-size: .95rem; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
+
+  .qbox { background: var(--panel); border-radius: 18px; padding: 8px 12px 10px; text-align: center; }
+  .clock { height: 16px; border-radius: 8px; background: rgba(0,0,0,.45); overflow: hidden; border: 2px solid rgba(255,255,255,.4); }
+  .clock i { display: block; height: 100%; width: 100%; background: var(--green); border-radius: 6px; }
+  .clock.low { animation: blink .4s infinite alternate; }
+  @keyframes blink { to { border-color: var(--red); box-shadow: 0 0 14px var(--red); } }
+  .tl { font-variant-numeric: tabular-nums; font-size: .85rem; color: var(--dim); margin-top: 2px; }
+  .q { font-size: 2.6rem; font-weight: 900; line-height: 1.1; }
+  .q .ans { display: inline-block; min-width: 3.2ch; padding: 0 8px; margin-left: 6px; color: var(--cyan);
+    border-bottom: 4px solid rgba(255,255,255,.5); }
+  .msg { min-height: 1.4em; font-weight: 800; font-size: 1rem; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .pad button { font-size: 1.7rem; font-weight: 900; padding: 13px 0; border: 0; border-radius: 16px; color: #fff; touch-action: manipulation;
+    background: linear-gradient(#2f6b4a, #1f4d34); box-shadow: 0 5px 0 #123423; }
+  .pad button:active { transform: translateY(4px); box-shadow: 0 1px 0 #123423; }
+  .pad .ok { background: linear-gradient(#ffe066, #ffb703); color: #3a2300; box-shadow: 0 5px 0 #b27900; font-size: 1.3rem; }
+  .pad .del { background: linear-gradient(#c0392b, #922b21); box-shadow: 0 5px 0 #5e1a14; }
+  .wrongflash { animation: wf .4s; } @keyframes wf { 30% { background: rgba(255,60,60,.5); } }
+  .greenflash { animation: gf .6s; } @keyframes gf { 30% { background: rgba(255,255,255,.6); } }
+
+  /* ---------- end ---------- */
+  .trophy { text-align: center; font-size: 96px; animation: bounce 1.2s infinite; }
+  .jersey { margin: 4px auto; width: 150px; text-align: center; background: #e63946; border-radius: 14px 14px 30px 30px; padding: 10px 6px 14px;
+    box-shadow: 0 5px 0 #8b1d27; }
+  .jersey .nm { font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: .95rem; word-break: break-word; }
+  .jersey .no { font-weight: 900; font-size: 3rem; line-height: 1; }
+  .title { text-align: center; font-weight: 900; font-size: 1.35rem; color: var(--gold); margin: 12px 0; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
+  .stats p { margin: 5px 0; font-size: 1.05rem; font-weight: 700; }
+  .miss { background: var(--panel); border-radius: 14px; padding: 8px 14px; margin-top: 10px; font-weight: 700; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div id="flash"></div>
+<canvas id="fx"></canvas>
+
+<section id="setup" class="screen on">
+  <div class="ballhero">⚽</div>
+  <h1>PENALTY <b>TABLES</b></h1>
+  <p class="sub">Un seul tir par penalty : pas de seconde chance !</p>
+  <div class="card">
+    <label for="name">Ton nom de champion</label>
+    <input id="name" type="text" value="Champion" autocomplete="off" maxlength="14">
+    <label>Quelles tables ?</label>
+    <div class="chips" id="chips"></div>
+    <input id="tables" type="text" value="2-10" autocomplete="off" autocapitalize="off" style="margin-top:8px" aria-label="Tables">
+    <div class="row">
+      <div><label for="max">Jusqu'à (×)</label><input id="max" type="number" inputmode="numeric" value="10"></div>
+      <div><label for="time">Secondes / tir</label><input id="time" type="number" inputmode="numeric" value="4"></div>
+      <div><label for="count">Nb de tirs</label><input id="count" type="number" inputmode="numeric" value="10"></div>
+      <div><label for="lives">Vies</label><input id="lives" type="number" inputmode="numeric" value="3"></div>
+    </div>
+    <p id="err"></p>
+  </div>
+  <button class="big" id="start">⚽ COUP D'ENVOI !</button>
+</section>
+
+<section id="game" class="screen">
+  <div class="hud"><span id="hq"></span><span class="mid" id="hh"></span><span id="hs"></span><button id="mute" aria-label="Son">🔊</button></div>
+  <div class="pitch" id="pitch">
+    <div class="crowd" id="crowd"></div>
+    <div class="goal" id="goal"><div class="keeper" id="keeper">🧤</div></div>
+    <div class="spot"></div>
+    <div class="ball idle" id="ball">⚽</div>
+    <div class="banner" id="banner"></div>
+    <div class="fire" id="fire"></div>
+  </div>
+  <div class="qbox">
+    <div class="clock" id="clock"><i id="fuse"></i></div>
+    <div class="tl" id="tl"></div>
+    <div class="q"><span id="qq"></span><span class="ans" id="aa"></span></div>
+    <div class="msg" id="mm"></div>
+    <div class="pad" id="pad"></div>
+  </div>
+</section>
+
+<section id="end" class="screen">
+  <div class="trophy" id="tr">🏆</div>
+  <h1>FIN DU MATCH</h1>
+  <div class="jersey"><div class="nm" id="jn"></div><div class="no" id="jg"></div></div>
+  <div class="title" id="rt"></div>
+  <div class="card stats" id="rs"></div>
+  <div id="rm"></div>
+  <button class="big" id="again">🔁 REJOUER</button>
+</section>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+const GOOD = ['Quelle frappe !', 'Lucarne !', 'Le gardien est battu !', 'Tir de champion !', 'Goal de légende !', 'Ballon d\'or !', 'Imparable !'];
+const SAVES = ['Arrêt du gardien !', 'Le gardien a tout vu !', 'Trop lent, il a plongé !', 'Capté !'];
+const CHANTS = ['🎉', '📣', '🥳', '🎺', '🙌', '🇫🇷', '🎊', '📣'];
+
+function show(id) { document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === id)); }
+
+/* ---------- sound (WebAudio, no files) ---------- */
+let AC = null, muted = false;
+try { muted = localStorage.getItem('muted') === '1'; } catch (_) {}
+function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {} } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+function tone(f, d = .12, type = 'sine', vol = .15, at = 0, slide) {
+  const a = ac(); if (!a || muted) return;
+  const t = a.currentTime + at, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + .02);
+}
+function noise(d = .5, vol = .12) {
+  const a = ac(); if (!a || muted) return;
+  const b = a.createBuffer(1, a.sampleRate * d, a.sampleRate), x = b.getChannelData(0);
+  for (let i = 0; i < x.length; i++) x[i] = (Math.random() * 2 - 1) * (1 - i / x.length);
+  const s = a.createBufferSource(), g = a.createGain(), f = a.createBiquadFilter();
+  f.type = 'bandpass'; f.frequency.value = 1200; g.gain.value = vol; s.buffer = b; s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+}
+const sfx = {
+  whistle() { tone(2400, .25, 'sine', .12); tone(2700, .35, 'sine', .12, .12); },
+  kick() { tone(160, .12, 'triangle', .3, 0, 60); },
+  goal() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .22, 'square', .09, i * .09)); noise(1.2, .14); },
+  save() { tone(220, .25, 'sawtooth', .12, 0, 90); },
+  wrong() { tone(150, .25, 'sawtooth', .1, 0, 100); },
+  tick() { tone(900, .04, 'square', .05); },
+  end() { [392, 392, 392, 523].forEach((f, i) => tone(f, .25, 'triangle', .15, i * .22)); },
+};
+$('mute').onclick = () => { muted = !muted; $('mute').textContent = muted ? '🔇' : '🔊'; try { localStorage.setItem('muted', muted ? '1' : '0'); } catch (_) {} };
+$('mute').textContent = muted ? '🔇' : '🔊';
+
+/* ---------- confetti ---------- */
+const cv = $('fx'), cx = cv.getContext('2d');
+let parts = [], raf = 0;
+function sizeCv() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener('resize', sizeCv); sizeCv();
+function confetti(n = 120, x = .5, y = .45) {
+  const cols = ['#ffd23f', '#ff4d4d', '#3ddc84', '#5ce1ff', '#ffffff', '#ff8fd8'];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = 4 + Math.random() * 9;
+    parts.push({ x: x * cv.width, y: y * cv.height, vx: Math.cos(a) * v * devicePixelRatio, vy: (Math.sin(a) * v - 5) * devicePixelRatio,
+      s: (4 + Math.random() * 6) * devicePixelRatio, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: pick(cols), life: 90 + Math.random() * 50 });
+  }
+  if (!raf) raf = requestAnimationFrame(stepFx);
+}
+function stepFx() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  parts = parts.filter((p) => p.life-- > 0 && p.y < cv.height + 40);
+  for (const p of parts) {
+    p.vy += .32 * devicePixelRatio; p.x += p.vx; p.y += p.vy; p.vx *= .99; p.r += p.vr;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.globalAlpha = Math.min(1, p.life / 30);
+    cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); cx.restore();
+  }
+  raf = parts.length ? requestAnimationFrame(stepFx) : 0;
+}
+
+/* ---------- setup ---------- */
+function parseTables(str) {
+  const set = new Set();
+  for (const part of str.split(',')) {
+    const p = part.trim(); if (!p) continue;
+    const r = /^(\d+)\s*-\s*(\d+)$/.exec(p);
+    if (r) { let lo = +r[1], hi = +r[2]; if (lo > hi) [lo, hi] = [hi, lo]; for (let n = lo; n <= hi; n++) set.add(n); }
+    else if (/^\d+$/.test(p)) set.add(+p);
+    else return null;
+  }
+  const l = [...set].filter((n) => n >= 1 && n <= 100).sort((a, b) => a - b);
+  return l.length ? l : null;
+}
+const FIELDS = ['name', 'tables', 'max', 'time', 'count', 'lives'];
+try { const s = JSON.parse(localStorage.getItem('penalty2') || '{}'); FIELDS.forEach((f) => { if (s[f]) $(f).value = s[f]; }); } catch (_) {}
+
+const chipsEl = $('chips');
+for (let n = 1; n <= 12; n++) { const b = document.createElement('button'); b.className = 'chip'; b.textContent = n; b.dataset.n = n; chipsEl.appendChild(b); }
+function syncChips() { const t = parseTables($('tables').value) || []; chipsEl.querySelectorAll('.chip').forEach((b) => b.classList.toggle('on', t.includes(+b.dataset.n))); }
+chipsEl.addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  const t = new Set(parseTables($('tables').value) || []); const n = +b.dataset.n;
+  t.has(n) ? t.delete(n) : t.add(n);
+  $('tables').value = [...t].sort((a, c) => a - c).join(',');
+  syncChips();
+});
+$('tables').addEventListener('input', syncChips); syncChips();
+
+/* ---------- numpad ---------- */
+['1','2','3','4','5','6','7','8','9','⌫','0','TIRER !'].forEach((k) => {
+  const b = document.createElement('button'); b.textContent = k; b.dataset.k = k;
+  if (k === 'TIRER !') b.className = 'ok'; if (k === '⌫') b.className = 'del';
+  $('pad').appendChild(b);
+});
+$('pad').addEventListener('pointerdown', (e) => { const b = e.target.closest('button'); if (b) { e.preventDefault(); key(b.dataset.k); } });
+document.addEventListener('keydown', (e) => {
+  if (!$('game').classList.contains('on')) return;
+  if (/^\d$/.test(e.key)) key(e.key); else if (e.key === 'Backspace') key('⌫'); else if (e.key === 'Enter') key('TIRER !');
+});
+
+/* ---------- game ---------- */
+let G = null;
+const ball = $('ball'), keeper = $('keeper'), goal = $('goal'), banner = $('banner'), crowd = $('crowd');
+crowd.innerHTML = Array.from({ length: 16 }, (_, i) => `<span>${CHANTS[i % CHANTS.length]}</span>`).join('');
+
+function setMsg(t, col) { $('mm').textContent = t; $('mm').style.color = col || '#fff'; }
+function flash(cls) { const f = $('flash'); f.className = ''; void f.offsetWidth; f.className = cls; }
+function showBanner(text, color) { banner.textContent = text; banner.style.color = color; banner.classList.remove('pop'); void banner.offsetWidth; banner.classList.add('pop'); }
+
+function hud() {
+  $('hq').textContent = `⚽ ${G.q}/${G.total}`;
+  $('hh').textContent = '❤️'.repeat(G.lives) + '🖤'.repeat(G.maxLives - G.lives);
+  $('hs').textContent = `${G.goals} but${G.goals > 1 ? 's' : ''} · ${G.score} pts`;
+  $('fire').textContent = G.streak >= 3 ? `🔥 EN FEU ×${G.streak}` : '';
+}
+
+function key(k) {
+  if (!G || !G.active) return;
+  ac();
+  if (/^\d$/.test(k)) { if (G.input.length < 4) G.input += k; }
+  else if (k === '⌫') G.input = G.input.slice(0, -1);
+  else if (k === 'TIRER !' && G.input) {
+    if (+G.input === G.a * G.b) return endQuestion('correct');
+    G.wrong = 1; return endQuestion('wrong'); // one shot only: no second chances
+  }
+  $('aa').textContent = G.input;
+}
+
+$('start').onclick = () => {
+  ac();
+  const tables = parseTables($('tables').value);
+  const num = (id, lo, hi) => { const n = Math.floor(parseFloat($(id).value)); return n >= lo && n <= hi ? n : null; };
+  const max = num('max', 1, 100), time = num('time', 1, 120), count = num('count', 1, 200), lives = num('lives', 1, 10);
+  if (!tables) return ($('err').textContent = "Tables : je n'ai pas compris. Essaie 3,7 ou 2-5.");
+  if (!max || !time || !count || !lives) return ($('err').textContent = 'Vérifie les nombres (jusqu\'à 100, temps 1-120, tirs 1-200, vies 1-10).');
+  $('err').textContent = '';
+  const cfg = { name: ($('name').value.trim() || 'Champion').replace(/[<>&"]/g, ''), tables, max, time, count, lives };
+  try { localStorage.setItem('penalty2', JSON.stringify(Object.fromEntries(FIELDS.map((f) => [f, $(f).value])))); } catch (_) {}
+  play(cfg);
+};
+$('again').onclick = () => show('setup');
+
+async function play(cfg) {
+  const pool = [];
+  for (const t of cfg.tables) for (let m = 1; m <= cfg.max; m++) pool.push([t, m]);
+  const list = [];
+  while (list.length < cfg.count) list.push(...shuffle([...pool]));
+  const qs = list.slice(0, cfg.count).map(([t, m]) => (Math.random() < 0.5 ? [t, m] : [m, t]));
+  G = { cfg, qs, i: -1, total: qs.length, lives: cfg.lives, maxLives: cfg.lives, score: 0, goals: 0, streak: 0, q: 0, results: [], active: false };
+  show('game');
+  sfx.whistle(); showBanner('COUP D\'ENVOI !', '#fff');
+  await wait(1100);
+  next();
+}
+
+function resetScene() {
+  ball.getAnimations().forEach((a) => a.cancel());
+  keeper.getAnimations().forEach((a) => a.cancel());
+  ball.style.transform = ''; ball.style.opacity = 1; ball.classList.add('idle');
+  keeper.className = 'keeper'; keeper.style.transform = '';
+  crowd.classList.remove('cheer');
+  keeper.textContent = '🧤';
+}
+
+function next() {
+  G.i++;
+  if (G.i >= G.qs.length || G.lives <= 0) return finish();
+  resetScene();
+  [G.a, G.b] = G.qs[G.i];
+  G.q = G.i + 1; G.input = ''; G.wrong = 0; G.active = true; G.lastTick = -1;
+  G.limit = G.cfg.time * 1000; G.start = performance.now();
+  $('qq').textContent = `${G.a} × ${G.b} =`; $('aa').textContent = ''; setMsg('Un seul essai !', '#fff');
+  hud();
+  const tick = () => {
+    if (!G.active) return;
+    const left = Math.max(0, G.limit - (performance.now() - G.start));
+    const f = left / G.limit;
+    $('fuse').style.width = f * 100 + '%';
+    $('fuse').style.background = f > 0.6 ? 'var(--green)' : f > 0.3 ? 'var(--gold)' : 'var(--red)';
+    $('clock').classList.toggle('low', f <= 0.3);
+    $('tl').textContent = (left / 1000).toFixed(1) + ' s';
+    keeper.style.animationDuration = (0.4 + 1.2 * f) + 's'; // keeper gets more nervous as time runs out
+    if (f <= 0.3) { const s = Math.ceil(left / 1000); if (s !== G.lastTick) { G.lastTick = s; sfx.tick(); } }
+    if (left <= 0) return endQuestion('timeout');
+    G.raf = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+async function endQuestion(result) {
+  G.active = false; cancelAnimationFrame(G.raf); $('clock').classList.remove('low');
+  const left = Math.max(0, G.limit - (performance.now() - G.start));
+  const { a, b, wrong } = G;
+  ball.classList.remove('idle');
+  const side = Math.random() < .5 ? -1 : 1;
+  const gw = goal.offsetWidth, gh = goal.offsetHeight;
+  const pitchH = $('pitch').offsetHeight;
+  sfx.kick();
+
+  if (result === 'correct') {
+    const clean = wrong === 0;
+    G.streak = clean ? G.streak + 1 : 0;
+    const bonus = clean && G.streak % 3 === 0 ? 5 : 0;
+    const gained = Math.max(2, 10 - 2 * wrong) + Math.ceil(left / 1000) + bonus;
+    G.score += gained; G.goals++;
+    G.results.push({ a, b, clean });
+    // keeper dives the wrong way, ball flies in the net
+    keeper.className = 'keeper dive'; keeper.style.transform = `translateX(${-side * gw * .3}px) rotate(${-side * 70}deg)`;
+    const dy = -(pitchH * .86 - gh * .45), dx = side * gw * .33;
+    const flight = ball.animate([
+      { transform: 'translate(0,0) scale(1) rotate(0)' },
+      { transform: `translate(${dx}px, ${dy}px) scale(.55) rotate(${side * 720}deg)` },
+    ], { duration: 520, easing: 'cubic-bezier(.3,.6,.4,1)', fill: 'forwards' });
+    await flight.finished.catch(() => {});
+    goal.classList.remove('shake'); void goal.offsetWidth; goal.classList.add('shake');
+    sfx.goal(); confetti(G.streak >= 3 ? 220 : 120); flash('greenflash'); crowd.classList.add('cheer');
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+    showBanner(bonus ? 'BUUUT ! +BONUS 🔥' : pick(['BUUUT !', 'GOOOAL !', 'BUUUT !!!']), 'var(--gold)');
+    setMsg(`✔ ${a} × ${b} = ${a * b}  (+${gained}) ${pick(GOOD)}`, 'var(--green)');
+    hud();
+    await wait(1500);
+  } else {
+    // keeper reads it and saves
+    G.lives--; G.streak = 0; G.results.push({ a, b, clean: false });
+    keeper.className = 'keeper dive'; keeper.style.transform = `translateX(${side * gw * .18}px) translateY(-${gh * .2}px) rotate(${side * -35}deg) scale(1.3)`;
+    const flight = ball.animate([
+      { transform: 'translate(0,0) scale(1)' },
+      { transform: `translate(${side * gw * .18}px, ${-(pitchH * .86 - gh * .55)}px) scale(.6) rotate(360deg)`, offset: .6 },
+      { transform: `translate(${side * gw * .6}px, ${-(pitchH * .35)}px) scale(.9) rotate(700deg)` },
+    ], { duration: 650, easing: 'ease-out', fill: 'forwards' });
+    await flight.finished.catch(() => {});
+    sfx.save(); flash('wrongflash'); if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
+    keeper.textContent = '🧤';
+    showBanner(pick(SAVES), 'var(--red)');
+    setMsg(`✘ ${a} × ${b} = ${a * b}${result === 'wrong' ? '  Mauvaise réponse !' : '  Trop lent !'}`, '#ffb3b3');
+    hud();
+    await wait(1700);
+  }
+  next();
+}
+
+function finish() {
+  resetScene();
+  sfx.end();
+  const r = G.results, clean = r.filter((x) => x.clean).length, pct = r.length ? Math.round(clean / r.length * 100) : 0;
+  const survived = G.lives > 0;
+  $('tr').textContent = !survived ? '😢' : pct === 100 ? '🏆' : pct >= 80 ? '🥇' : pct >= 50 ? '🥈' : '🥉';
+  $('jn').textContent = G.cfg.name; $('jg').textContent = G.goals;
+  $('rs').innerHTML = `<p>⚽ Buts marqués : <b>${G.goals}</b> sur ${r.length} tirs</p>` +
+    `<p>🎯 Du premier coup : <b>${clean}</b> (${pct}%)</p><p>⭐ Score : <b>${G.score}</b></p>` +
+    `<p>❤️ Vies : ${survived ? '❤️'.repeat(G.lives) : 'aucune'}</p>`;
+  $('rt').textContent = !survived ? "Le match est perdu... mais on s'entraîne et on revient !"
+    : pct === 100 ? 'BALLON D\'OR ! Sans faute !' : pct >= 80 ? 'Un vrai attaquant de star !'
+    : pct >= 50 ? 'Bon match ! Continue à t\'entraîner !' : 'Tu as tenu bon jusqu\'au bout, bravo !';
+  const seen = new Set(), miss = [];
+  for (const x of r) if (!x.clean) { const k = Math.min(x.a, x.b) + 'x' + Math.max(x.a, x.b); if (!seen.has(k)) { seen.add(k); miss.push(`${x.a} × ${x.b} = ${x.a * x.b}`); } }
+  $('rm').innerHTML = miss.length ? `<div class="miss">📝 À réviser :<br>${miss.join('<br>')}</div>` : '';
+  show('end');
+  if (survived) { confetti(200, .5, .3); setTimeout(() => confetti(150, .2, .4), 400); setTimeout(() => confetti(150, .8, .4), 700); }
+}
+</script>
+</body>
+</html>
