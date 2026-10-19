@@ -8,12 +8,14 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Penalty">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0b5d2a">
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230b5d2a'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#002654">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root {
-    --grass1: #11883b; --grass2: #0e7a34; --night: #0a1a2f; --panel: rgba(8, 24, 20, .72);
-    --text: #fff; --dim: #b9d8c4; --gold: #ffd23f; --green: #3ddc84; --red: #ff4d4d; --cyan: #5ce1ff;
+    --grass1: #11883b; --grass2: #0e7a34; --night: #001a40; --panel: rgba(0, 24, 66, .82); --blue: #002654; --fr-red: #ed2939; --amber: #ffc83d;
+    --text: #fff; --dim: #bcd0f0; --gold: #ffffff; --green: #3ddc84; --red: #ff5a67; --cyan: #5ce1ff;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; color: var(--text); overscroll-behavior: none;
@@ -22,6 +24,8 @@
   .screen { display: none; position: fixed; inset: 0; flex-direction: column; max-width: 520px; margin: 0 auto;
     padding: calc(env(safe-area-inset-top) + 10px) 14px calc(env(safe-area-inset-bottom) + 10px); overflow: hidden auto; }
   .screen.on { display: flex; }
+  body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 6px; z-index: 70;
+    background: linear-gradient(90deg, #0055a4 0 33.3%, #fff 33.3% 66.6%, #ef4135 66.6%); }
   .bg { position: fixed; inset: 0; z-index: -1;
     background:
       radial-gradient(ellipse at 50% 0, rgba(255,255,255,.22), transparent 55%),
@@ -42,11 +46,11 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .chip { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); background: rgba(0,0,0,.3);
     color: #fff; font-size: 1.05rem; font-weight: 800; touch-action: manipulation; }
-  .chip.on { background: var(--gold); color: #3a2b00; border-color: #fff; transform: scale(1.08); }
+  .chip.on { background: var(--fr-red); color: #fff; border-color: #fff; transform: scale(1.08); }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .big { margin-top: 16px; width: 100%; padding: 16px; font-size: 1.35rem; font-weight: 900; border: 0; border-radius: 18px;
-    background: linear-gradient(#ffe066, #ffb703); color: #3a2300; box-shadow: 0 6px 0 #b27900; touch-action: manipulation; }
-  .big:active { transform: translateY(5px); box-shadow: 0 1px 0 #b27900; }
+    background: linear-gradient(#ff4b5b, #ed2939); color: #fff; box-shadow: 0 6px 0 #8f1420; touch-action: manipulation; }
+  .big:active { transform: translateY(5px); box-shadow: 0 1px 0 #8f1420; }
   #err { color: #ffb3b3; min-height: 1.2em; margin: 8px 0 0; font-weight: 700; }
 
   /* ---------- game ---------- */
@@ -59,7 +63,7 @@
       radial-gradient(ellipse at 50% 100%, rgba(255,255,255,.15), transparent 60%),
       repeating-linear-gradient(0deg, var(--grass1) 0 34px, var(--grass2) 34px 68px);
     box-shadow: inset 0 0 0 3px rgba(255,255,255,.35); }
-  .crowd { position: absolute; top: 0; left: 0; right: 0; height: 34px; background: #162a47; font-size: 20px; white-space: nowrap;
+  .crowd { position: absolute; top: 0; left: 0; right: 0; height: 34px; background: #0a2a5e; font-size: 20px; white-space: nowrap;
     overflow: hidden; line-height: 34px; text-align: center; letter-spacing: 2px; }
   .crowd span { display: inline-block; }
   .crowd.cheer span { animation: hop .35s infinite alternate; }
@@ -72,7 +76,7 @@
       repeating-linear-gradient(-45deg, rgba(255,255,255,.28) 0 2px, transparent 2px 14px), rgba(0,0,0,.35); }
   .goal.shake { animation: netshake .5s; }
   @keyframes netshake { 20% { transform: translateX(-50%) scale(1.04, 1.06); } 40% { transform: translateX(-50%) scale(.98, .97); } 60% { transform: translateX(-50%) scale(1.02); } }
-  .keeper { position: absolute; bottom: 0; left: 50%; font-size: 46px; line-height: 1; margin-left: -23px;
+  .keeper { position: absolute; bottom: 0; left: 50%; width: 64px; margin-left: -32px; text-align: center; font-size: 30px; line-height: 1;
     animation: patrol 1.6s ease-in-out infinite alternate; transform-origin: 50% 80%; }
   @keyframes patrol { from { transform: translateX(-34px); } to { transform: translateX(34px); } }
   .keeper.dive { animation: none; transition: transform .35s cubic-bezier(.2,.9,.3,1); }
@@ -89,6 +93,8 @@
   .shooter small { display: block; color: #cfe0ff; font-weight: 700; }
   .face { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; object-position: 50% 15%; border: 2px solid var(--gold);
     background: #123; flex: none; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+  .face.kp { width: 56px; height: 56px; border-color: #ffd23f; margin: 0 auto; }
+  .gl { margin-top: -10px; position: relative; }
   .face.sm { width: 36px; height: 36px; border-width: 2px; font-size: 1rem; }
   .scorer { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
   details.cred { margin-top: 12px; color: var(--dim); font-size: .75rem; } details.cred a { color: var(--cyan); }
@@ -111,17 +117,17 @@
   .msg { min-height: 1.4em; font-weight: 800; font-size: 1rem; }
   .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
   .pad button { font-size: 1.7rem; font-weight: 900; padding: 13px 0; border: 0; border-radius: 16px; color: #fff; touch-action: manipulation;
-    background: linear-gradient(#2f6b4a, #1f4d34); box-shadow: 0 5px 0 #123423; }
-  .pad button:active { transform: translateY(4px); box-shadow: 0 1px 0 #123423; }
-  .pad .ok { background: linear-gradient(#ffe066, #ffb703); color: #3a2300; box-shadow: 0 5px 0 #b27900; font-size: 1.3rem; }
+    background: linear-gradient(#1c4a94, #0e3270); box-shadow: 0 5px 0 #06214d; }
+  .pad button:active { transform: translateY(4px); box-shadow: 0 1px 0 #06214d; }
+  .pad .ok { background: linear-gradient(#ff4b5b, #ed2939); color: #fff; box-shadow: 0 5px 0 #8f1420; font-size: 1.3rem; }
   .pad .del { background: linear-gradient(#c0392b, #922b21); box-shadow: 0 5px 0 #5e1a14; }
   .wrongflash { animation: wf .4s; } @keyframes wf { 30% { background: rgba(255,60,60,.5); } }
   .greenflash { animation: gf .6s; } @keyframes gf { 30% { background: rgba(255,255,255,.6); } }
 
   /* ---------- end ---------- */
   .trophy { text-align: center; font-size: 96px; animation: bounce 1.2s infinite; }
-  .jersey { margin: 4px auto; width: 150px; text-align: center; background: #e63946; border-radius: 14px 14px 30px 30px; padding: 10px 6px 14px;
-    box-shadow: 0 5px 0 #8b1d27; }
+  .jersey { margin: 4px auto; width: 150px; text-align: center; background: #0b3d91; border-radius: 14px 14px 30px 30px; padding: 10px 6px 14px;
+    box-shadow: 0 5px 0 #06214d; border-top: 6px solid #ed2939; }
   .jersey .nm { font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: .95rem; word-break: break-word; }
   .jersey .no { font-weight: 900; font-size: 3rem; line-height: 1; }
   .title { text-align: center; font-weight: 900; font-size: 1.35rem; color: var(--gold); margin: 12px 0; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
@@ -159,7 +165,7 @@
   <div class="hud"><span id="hq"></span><span class="mid" id="hh"></span><span id="hs"></span><button id="mute" aria-label="Son">🔊</button></div>
   <div class="pitch" id="pitch">
     <div class="crowd" id="crowd"></div>
-    <div class="goal" id="goal"><div class="keeper" id="keeper">🧤</div></div>
+    <div class="goal" id="goal"><div class="keeper" id="keeper"></div></div>
     <div class="spot"></div>
     <div class="ball idle" id="ball">⚽</div>
     <div class="shooter" id="shooter"></div>
@@ -203,10 +209,11 @@ const SQUAD = [
   ['Maghnes AKLIOUCHE', 'Milieu'], ['Eduardo CAMAVINGA', 'Milieu'], ['Rayan CHERKI', 'Milieu'], ['Lucas DA CUNHA', 'Milieu'],
   ['Manu KONÉ', 'Milieu'], ['Adrien RABIOT', 'Milieu'],
 ];
-const PHOTOS = {"Kylian MBAPPÉ": "photos/kylian-mbappe.jpg", "Andy DIOUF": "photos/andy-diouf.jpg", "Jérémy JACQUET": "photos/jeremy-jacquet.png", "Pierre KALULU KYATENGWA": "photos/pierre-kalulu-kyatengwa.jpg", "Jules KOUNDÉ": "photos/jules-kounde.jpg", "Maxence LACROIX": "photos/maxence-lacroix.jpg", "Adrien TRUFFERT": "photos/adrien-truffert.jpg", "Leny YORO": "photos/leny-yoro.jpg", "Maghnes AKLIOUCHE": "photos/maghnes-akliouche.jpg", "Eduardo CAMAVINGA": "photos/eduardo-camavinga.jpg", "Rayan CHERKI": "photos/rayan-cherki.jpg", "Manu KONÉ": "photos/manu-kone.jpg", "Adrien RABIOT": "photos/adrien-rabiot.jpg"};
+const PHOTOS = {"Mike MAIGNAN": "photos/mike-maignan.jpg", "Kylian MBAPPÉ": "photos/kylian-mbappe.jpg", "Andy DIOUF": "photos/andy-diouf.jpg", "Jérémy JACQUET": "photos/jeremy-jacquet.png", "Pierre KALULU KYATENGWA": "photos/pierre-kalulu-kyatengwa.jpg", "Jules KOUNDÉ": "photos/jules-kounde.jpg", "Maxence LACROIX": "photos/maxence-lacroix.jpg", "Adrien TRUFFERT": "photos/adrien-truffert.jpg", "Leny YORO": "photos/leny-yoro.jpg", "Maghnes AKLIOUCHE": "photos/maghnes-akliouche.jpg", "Eduardo CAMAVINGA": "photos/eduardo-camavinga.jpg", "Rayan CHERKI": "photos/rayan-cherki.jpg", "Manu KONÉ": "photos/manu-kone.jpg", "Adrien RABIOT": "photos/adrien-rabiot.jpg"};
 // [player, photographer, licence, source] - photos from Wikimedia Commons
-const CREDITS = [["Kylian MBAPPÉ", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Kylian_Mbappe_France_v_Senegal_16_June_2026-391_(cropped).jpg"], ["Andy DIOUF", "Paté kroute", "CC0", "https://commons.wikimedia.org/wiki/File:Andy_Diouf_ASSE_RCL_2425.jpg"], ["Jérémy JACQUET", "Paté kroute", "CC0", "https://commons.wikimedia.org/wiki/File:Jacquet_asse_srfc_2425.png"], ["Pierre KALULU KYATENGWA", "Werner100359", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:PierreKalulu2022.jpg"], ["Jules KOUNDÉ", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Jules_Kounde_France_v_Senegal_16_June_2026-449_(cropped).jpg"], ["Maxence LACROIX", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Maxence_Lacroix_France_v_Norway_26_June_26-031_(cropped).jpg"], ["Adrien TRUFFERT", "Timmy96", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Adrien_Truffert.jpg"], ["Leny YORO", "Supporterhéninois", "CC0", "https://commons.wikimedia.org/wiki/File:RC_Lens_-_Lille_OSC_(08-10-2023)_12_(cropped1).jpg"], ["Maghnes AKLIOUCHE", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Maghnes_Akliouche_France_v_Senegal_16_June_2026-512.jpg"], ["Eduardo CAMAVINGA", "Fotografías Archimadrid.es", "CC BY 2.0", "https://commons.wikimedia.org/wiki/File:Ofrenda_de_la_Liga_y_la_Champions-13-L.Mill%C3%A1n_(52109790215)_(cropped).jpg"], ["Rayan CHERKI", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Rayan_Cherki_France_v_Norway_26_June_26-114.jpg"], ["Manu KONÉ", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Manu_Kone_France_v_Norway_26_June_26-066_(cropped).jpg"], ["Adrien RABIOT", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Adrien_Rabiot_France_v_Senegal_16_June_2026-253.jpg"]];
+const CREDITS = [["Mike MAIGNAN", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Mike_Maignan_France_v_Norway_26_June_26-132_(cropped).jpg"], ["Kylian MBAPPÉ", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Kylian_Mbappe_France_v_Senegal_16_June_2026-391_(cropped).jpg"], ["Andy DIOUF", "Paté kroute", "CC0", "https://commons.wikimedia.org/wiki/File:Andy_Diouf_ASSE_RCL_2425.jpg"], ["Jérémy JACQUET", "Paté kroute", "CC0", "https://commons.wikimedia.org/wiki/File:Jacquet_asse_srfc_2425.png"], ["Pierre KALULU KYATENGWA", "Werner100359", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:PierreKalulu2022.jpg"], ["Jules KOUNDÉ", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Jules_Kounde_France_v_Senegal_16_June_2026-449_(cropped).jpg"], ["Maxence LACROIX", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Maxence_Lacroix_France_v_Norway_26_June_26-031_(cropped).jpg"], ["Adrien TRUFFERT", "Timmy96", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Adrien_Truffert.jpg"], ["Leny YORO", "Supporterhéninois", "CC0", "https://commons.wikimedia.org/wiki/File:RC_Lens_-_Lille_OSC_(08-10-2023)_12_(cropped1).jpg"], ["Maghnes AKLIOUCHE", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Maghnes_Akliouche_France_v_Senegal_16_June_2026-512.jpg"], ["Eduardo CAMAVINGA", "Fotografías Archimadrid.es", "CC BY 2.0", "https://commons.wikimedia.org/wiki/File:Ofrenda_de_la_Liga_y_la_Champions-13-L.Mill%C3%A1n_(52109790215)_(cropped).jpg"], ["Rayan CHERKI", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Rayan_Cherki_France_v_Norway_26_June_26-114.jpg"], ["Manu KONÉ", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Manu_Kone_France_v_Norway_26_June_26-066_(cropped).jpg"], ["Adrien RABIOT", "Bryan Berlin", "CC BY-SA 4.0", "https://commons.wikimedia.org/wiki/File:Adrien_Rabiot_France_v_Senegal_16_June_2026-253.jpg"]];
 document.getElementById('credits').innerHTML = CREDITS.map(([n, a, l, u]) => `${esc(n)} : ${esc(a)}, <a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)}</a>`).join('<br>');
+const KEEPER = '<img class="face kp" src="photos/mike-maignan.jpg" alt="Mike MAIGNAN"><div class="gl">🧤</div>';
 const SHOOTERS = SQUAD.filter((p) => p[1] !== 'Gardien'); // goalkeepers don't take the penalties
 const CHANTS = ['🎉', '📣', '🥳', '🎺', '🙌', '🇫🇷', '🎊', '📣'];
 
@@ -369,13 +376,14 @@ async function play(cfg) {
   next();
 }
 
+keeper.innerHTML = KEEPER;
 function resetScene() {
   ball.getAnimations().forEach((a) => a.cancel());
   keeper.getAnimations().forEach((a) => a.cancel());
   ball.style.transform = ''; ball.style.opacity = 1; ball.classList.add('idle');
   keeper.className = 'keeper'; keeper.style.transform = '';
   crowd.classList.remove('cheer');
-  keeper.textContent = '🧤';
+  keeper.innerHTML = KEEPER;
 }
 
 function next() {
@@ -396,7 +404,7 @@ function next() {
     const left = Math.max(0, G.limit - (performance.now() - G.start));
     const f = left / G.limit;
     $('fuse').style.width = f * 100 + '%';
-    $('fuse').style.background = f > 0.6 ? 'var(--green)' : f > 0.3 ? 'var(--gold)' : 'var(--red)';
+    $('fuse').style.background = f > 0.6 ? 'var(--green)' : f > 0.3 ? 'var(--amber)' : 'var(--red)';
     $('clock').classList.toggle('low', f <= 0.3);
     $('tl').textContent = (left / 1000).toFixed(1) + ' s';
     keeper.style.animationDuration = (0.4 + 1.2 * f) + 's'; // keeper gets more nervous as time runs out
@@ -454,7 +462,7 @@ async function endQuestion(result) {
     ], { duration: 650, easing: 'ease-out', fill: 'forwards' });
     await flight.finished.catch(() => {});
     sfx.save(); flash('wrongflash'); if (navigator.vibrate) navigator.vibrate([200, 80, 200]);
-    keeper.textContent = '🧤';
+    keeper.innerHTML = KEEPER;
     showBanner(pick(SAVES), 'var(--red)');
     setMsg(`✘ ${a} × ${b} = ${a * b}${result === 'wrong' ? '  Mauvaise réponse !' : '  Trop lent !'}`, '#ffb3b3');
     hud();
