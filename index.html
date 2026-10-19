@@ -135,7 +135,6 @@
     <div class="chips" id="chips"></div>
     <input id="tables" type="text" value="2-10" autocomplete="off" autocapitalize="off" style="margin-top:8px" aria-label="Tables">
     <div class="row">
-      <div><label for="max">Jusqu'à (×)</label><input id="max" type="number" inputmode="numeric" value="10"></div>
       <div><label for="time">Secondes / tir</label><input id="time" type="number" inputmode="numeric" value="4"></div>
       <div><label for="count">Nb de tirs</label><input id="count" type="number" inputmode="numeric" value="10"></div>
       <div><label for="lives">Vies</label><input id="lives" type="number" inputmode="numeric" value="3"></div>
@@ -255,7 +254,8 @@ function parseTables(str) {
   const l = [...set].filter((n) => n >= 1 && n <= 100).sort((a, b) => a - b);
   return l.length ? l : null;
 }
-const FIELDS = ['name', 'tables', 'max', 'time', 'count', 'lives'];
+const MAX_FACTOR = 10; // other factor always goes from 1 to 10
+const FIELDS = ['name', 'tables', 'time', 'count', 'lives'];
 try { const s = JSON.parse(localStorage.getItem('penalty2') || '{}'); FIELDS.forEach((f) => { if (s[f]) $(f).value = s[f]; }); } catch (_) {}
 
 const chipsEl = $('chips');
@@ -314,9 +314,9 @@ $('start').onclick = () => {
   ac();
   const tables = parseTables($('tables').value);
   const num = (id, lo, hi) => { const n = Math.floor(parseFloat($(id).value)); return n >= lo && n <= hi ? n : null; };
-  const max = num('max', 1, 100), time = num('time', 1, 120), count = num('count', 1, 200), lives = num('lives', 1, 10);
+  const max = MAX_FACTOR, time = num('time', 1, 120), count = num('count', 1, 200), lives = num('lives', 1, 10);
   if (!tables) return ($('err').textContent = "Tables : je n'ai pas compris. Essaie 3,7 ou 2-5.");
-  if (!max || !time || !count || !lives) return ($('err').textContent = 'Vérifie les nombres (jusqu\'à 100, temps 1-120, tirs 1-200, vies 1-10).');
+  if (!time || !count || !lives) return ($('err').textContent = 'Vérifie les nombres (temps 1-120, tirs 1-200, vies 1-10).');
   $('err').textContent = '';
   const cfg = { name: ($('name').value.trim() || 'Champion').replace(/[<>&"]/g, ''), tables, max, time, count, lives };
   try { localStorage.setItem('penalty2', JSON.stringify(Object.fromEntries(FIELDS.map((f) => [f, $(f).value])))); } catch (_) {}
