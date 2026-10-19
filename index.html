@@ -82,6 +82,10 @@
   .ball { position: absolute; left: 50%; bottom: 14%; font-size: 44px; line-height: 1; margin-left: -22px; z-index: 5; }
   .ball.idle { animation: ballidle 1.2s ease-in-out infinite; }
   @keyframes ballidle { 50% { transform: translateY(-6px) rotate(25deg); } }
+  .shooter { position: absolute; left: 8px; right: 8px; bottom: 6px; text-align: center; font-weight: 900; font-size: .95rem;
+    text-shadow: 0 2px 0 rgba(0,0,0,.6); }
+  .shooter span { background: #1d4ed8; border: 2px solid #fff; border-radius: 999px; padding: 3px 12px; display: inline-block; }
+  .shooter small { color: #cfe0ff; font-weight: 700; }
   .banner { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font-size: 2.6rem; font-weight: 900; z-index: 10;
     text-shadow: 0 4px 0 rgba(0,0,0,.4), 0 0 20px rgba(0,0,0,.4); opacity: 0; pointer-events: none; }
   .banner.pop { animation: pop 1.3s ease-out; }
@@ -151,6 +155,7 @@
     <div class="goal" id="goal"><div class="keeper" id="keeper">🧤</div></div>
     <div class="spot"></div>
     <div class="ball idle" id="ball">⚽</div>
+    <div class="shooter" id="shooter"></div>
     <div class="banner" id="banner"></div>
     <div class="fire" id="fire"></div>
   </div>
@@ -182,6 +187,15 @@ const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math
 
 const GOOD = ['Quelle frappe !', 'Lucarne !', 'Le gardien est battu !', 'Tir de champion !', 'Goal de légende !', 'Ballon d\'or !', 'Imparable !'];
 const SAVES = ['Arrêt du gardien !', 'Le gardien a tout vu !', 'Trop lent, il a plongé !', 'Capté !'];
+// Équipe de France. Add more players here (e.g. the attackers): ['Prénom NOM', 'Poste']
+const SQUAD = [
+  ['Jean BUTEZ', 'Gardien'], ['Mike MAIGNAN', 'Gardien'], ['Guillaume RESTES', 'Gardien'],
+  ['Andy DIOUF', 'Défenseur'], ['Jérémy JACQUET', 'Défenseur'], ['Pierre KALULU KYATENGWA', 'Défenseur'], ['Jules KOUNDÉ', 'Défenseur'],
+  ['Maxence LACROIX', 'Défenseur'], ['Adrien TRUFFERT', 'Défenseur'], ['Leny YORO', 'Défenseur'],
+  ['Maghnes AKLIOUCHE', 'Milieu'], ['Eduardo CAMAVINGA', 'Milieu'], ['Rayan CHERKI', 'Milieu'], ['Lucas DA CUNHA', 'Milieu'],
+  ['Manu KONÉ', 'Milieu'], ['Adrien RABIOT', 'Milieu'],
+];
+const SHOOTERS = SQUAD.filter((p) => p[1] !== 'Gardien'); // goalkeepers don't take the penalties
 const CHANTS = ['🎉', '📣', '🥳', '🎺', '🙌', '🇫🇷', '🎊', '📣'];
 
 function show(id) { document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === id)); }
@@ -330,7 +344,7 @@ async function play(cfg) {
   const list = [];
   while (list.length < cfg.count) list.push(...shuffle([...pool]));
   const qs = list.slice(0, cfg.count).map(([t, m]) => (Math.random() < 0.5 ? [t, m] : [m, t]));
-  G = { cfg, qs, i: -1, total: qs.length, lives: cfg.lives, maxLives: cfg.lives, score: 0, goals: 0, streak: 0, q: 0, results: [], active: false };
+  G = { bag: [], scorers: [], cfg, qs, i: -1, total: qs.length, lives: cfg.lives, maxLives: cfg.lives, score: 0, goals: 0, streak: 0, q: 0, results: [], active: false };
   show('game');
   sfx.whistle(); showBanner('COUP D\'ENVOI !', '#fff');
   await wait(1100);
@@ -351,6 +365,9 @@ function next() {
   if (G.i >= G.qs.length || G.lives <= 0) return finish();
   resetScene();
   [G.a, G.b] = G.qs[G.i];
+  if (!G.bag.length) G.bag = shuffle([...SHOOTERS]);
+  G.shooter = G.bag.pop();
+  $('shooter').innerHTML = `<span>🇫🇷 ${G.shooter[0]} <small>· ${G.shooter[1]}</small></span>`;
   G.q = G.i + 1; G.input = ''; G.wrong = 0; G.active = true; G.lastTick = -1;
   G.limit = G.cfg.time * 1000; G.start = performance.now();
   $('qq').textContent = `${G.a} × ${G.b} =`; $('aa').textContent = ''; setMsg('Un seul essai !', '#fff');
@@ -387,7 +404,7 @@ async function endQuestion(result) {
     const bonus = clean && G.streak % 3 === 0 ? 5 : 0;
     const gained = Math.max(2, 10 - 2 * wrong) + Math.ceil(left / 1000) + bonus;
     G.score += gained; G.goals++;
-    G.results.push({ a, b, clean });
+    G.results.push({ a, b, clean }); G.scorers.push(G.shooter[0]);
     // keeper dives the wrong way, ball flies in the net
     keeper.className = 'keeper dive'; keeper.style.transform = `translateX(${-side * gw * .3}px) rotate(${-side * 70}deg)`;
     const dy = -(pitchH * .86 - gh * .45), dx = side * gw * .33;
@@ -400,7 +417,7 @@ async function endQuestion(result) {
     sfx.goal(); confetti(G.streak >= 3 ? 220 : 120); flash('greenflash'); crowd.classList.add('cheer');
     if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
     showBanner(bonus ? 'BUUUT ! +BONUS 🔥' : pick(['BUUUT !', 'GOOOAL !', 'BUUUT !!!']), 'var(--gold)');
-    setMsg(`✔ ${a} × ${b} = ${a * b}  (+${gained}) ${pick(GOOD)}`, 'var(--green)');
+    setMsg(`✔ ${a} × ${b} = ${a * b}  (+${gained}) ${G.shooter[0].split(' ').pop()} : ${pick(GOOD)}`, 'var(--green)');
     hud();
     await wait(1500);
   } else {
@@ -436,9 +453,12 @@ function finish() {
   $('rt').textContent = !survived ? "Le match est perdu... mais on s'entraîne et on revient !"
     : pct === 100 ? 'BALLON D\'OR ! Sans faute !' : pct >= 80 ? 'Un vrai attaquant de star !'
     : pct >= 50 ? 'Bon match ! Continue à t\'entraîner !' : 'Tu as tenu bon jusqu\'au bout, bravo !';
+  const byPlayer = {}; G.scorers.forEach((n) => { byPlayer[n] = (byPlayer[n] || 0) + 1; });
+  const sc = Object.entries(byPlayer).map(([n, k]) => `${n}${k > 1 ? ' ×' + k : ''}`);
   const seen = new Set(), miss = [];
   for (const x of r) if (!x.clean) { const k = Math.min(x.a, x.b) + 'x' + Math.max(x.a, x.b); if (!seen.has(k)) { seen.add(k); miss.push(`${x.a} × ${x.b} = ${x.a * x.b}`); } }
-  $('rm').innerHTML = miss.length ? `<div class="miss">📝 À réviser :<br>${miss.join('<br>')}</div>` : '';
+  $('rm').innerHTML = (sc.length ? `<div class="miss">🇫🇷 Buteurs des Bleus :<br>${sc.join('<br>')}</div>` : '') +
+    (miss.length ? `<div class="miss">📝 À réviser :<br>${miss.join('<br>')}</div>` : '');
   show('end');
   if (survived) { confetti(200, .5, .3); setTimeout(() => confetti(150, .2, .4), 400); setTimeout(() => confetti(150, .8, .4), 700); }
 }
